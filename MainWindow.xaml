@@ -12,6 +12,9 @@
                  Title="PSD2PNG"
                  Height="800"
                  Width="1280">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="b2v" />
+    </Window.Resources>
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
@@ -21,10 +24,14 @@
             <RowDefinition Height="Auto" />
             <RowDefinition />
         </Grid.RowDefinitions>
-        <ui:TitleBar Title="PSD2PNG" />
+        <ui:TitleBar Title="PSD2PNG - 拖入PSD到此窗口" />
         <Grid Grid.Row="1">
+            <ProgressBar IsIndeterminate="{Binding Busy}"
+                         Visibility="{Binding Busy, Converter={StaticResource b2v}}"
+                         VerticalAlignment="Bottom" />
             <ui:CardControl Header="{Binding PSDPath}">
-                <Button Content="保存" Command="{Binding SaveCommand}" />
+                <Button Content="保存"
+                        Command="{Binding SaveCommand}" />
             </ui:CardControl>
         </Grid>
         <Grid Grid.Row="2">

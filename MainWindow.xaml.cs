@@ -41,6 +41,18 @@ public class MainViewModel : ObservableObject
 {
     public static string Folder => Path.Combine(Path.GetTempPath(), "PSD2PNG");
 
+    #region Busy
+
+    private bool _busy;
+
+    public bool Busy
+    {
+        get => _busy;
+        set => SetProperty(ref _busy, value);
+    }
+
+    #endregion
+
     #region PSDPath
 
     private string _psdPath;
@@ -100,6 +112,13 @@ public class MainViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(PSDPath)) return;
         if (!File.Exists(PSDPath)) return;
+        if (Busy)
+        {
+            _ = new MessageBox { Title = "转换错误", Content = "正在转换，请等待转换完成。" }.ShowDialogAsync();
+            return;
+        }
+
+        Busy = true;
         try
         {
             var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose],"" info:");
@@ -132,6 +151,10 @@ public class MainViewModel : ObservableObject
         catch (Exception e)
         {
             _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync();
+        }
+        finally
+        {
+            Busy = false;
         }
     }
 
