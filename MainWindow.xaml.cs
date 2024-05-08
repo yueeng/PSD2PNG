@@ -102,45 +102,37 @@ public class MainViewModel : ObservableObject
         if (!File.Exists(PSDPath)) return;
         try
         {
-            var layers = await PsdLayers(PSDPath);
-            if (layers is null) return;
+            var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose],"" info:");
+            if (c != 0) throw new Exception($"magick: {c}\n{o}");
+            var layers = o.TrimEnd(',').Split(',');
+            if (layers.Length == 0) throw new Exception($"magick: {c}\n{o}");
             var folder = Path.Combine(Folder, Guid.NewGuid().ToString());
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
             var preview = Path.Combine(folder, "preview.png");
-            await PsdExport(PSDPath, 0, Path.Combine(folder, preview));
+            (c, o) = await Cmd("magick", $@"convert -depth 24 ""{PSDPath}[0]"" ""{preview}""");
+            if (c != 0) throw new Exception($"convert[0]: {c}\n{o}");
             PreviewPath = preview;
             foreach (var (it, i) in layers.Select((it, i) => (it, i)))
             {
                 if (i == 0) continue;
                 if (it != "Over") continue;
                 var target = Path.Combine(folder, $"output-{i}.png");
-                await PsdExport(PSDPath, i, target);
+                (c, o) = await Cmd("magick", $@"convert -depth 24 ""{PSDPath}[{i}]"" ""{target}""");
+                if (c != 0) throw new Exception($"convert[{i}]: {c}\n{o}");
             }
 
             var q = Math.Sqrt(layers.Count(l => l == "Over") - 1);
             var w = (int)Math.Ceiling(q);
             var h = (int)Math.Floor(q);
             var output = Path.Combine(folder, "target.png");
-            var (c, o) = await Cmd("magick", $@"montage -depth 24 -background none -geometry +10+10 -tile {w}x{h} -set label "" "" ""{Path.Combine(folder, "output-*.png")}"" ""{output}""");
-            if (c != 0) throw new Exception($"{c}: {o}");
+            (c, o) = await Cmd("magick", $@"montage -depth 24 -background none -geometry +10+10 -tile {w}x{h} -set label "" "" ""{Path.Combine(folder, "output-*.png")}"" ""{output}""");
+            if (c != 0) throw new Exception($"montage: {c}\n{o}");
             PNGPath = output;
         }
         catch (Exception e)
         {
             _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync();
         }
-    }
-
-    public static async Task<string[]?> PsdLayers(string file)
-    {
-        var (c, o) = await Cmd("magick", $@"""{file}"" -format ""%[compose],"" info:");
-        return c != 0 ? default : o.TrimEnd(',').Split(',');
-    }
-
-    public static async Task<bool> PsdExport(string file, int layer, string target)
-    {
-        var (c, _) = await Cmd("magick", $@"convert -depth 24 ""{file}[{layer}]"" ""{target}""");
-        return c == 0;
     }
 
     public static async Task<(int, string)> Cmd(string cmd, string args)
