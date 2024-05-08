@@ -38,7 +38,7 @@ public partial class MainWindow
     {
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
-        ConcreteDataContext.PSDPath = string.Empty;
+        ConcreteDataContext.PSDPath = null;
         ConcreteDataContext.PSDPath = files[0];
     }
 }
@@ -61,9 +61,9 @@ public class MainViewModel : ObservableObject
 
     #region PSDPath
 
-    private string _psdPath;
+    private string? _psdPath;
 
-    public string PSDPath
+    public string? PSDPath
     {
         get => _psdPath;
         set
@@ -77,9 +77,9 @@ public class MainViewModel : ObservableObject
 
     #region PreviewPath
 
-    private string _previewPath;
+    private string? _previewPath;
 
-    public string PreviewPath
+    public string? PreviewPath
     {
         get => _previewPath;
         set => SetProperty(ref _previewPath, value);
@@ -89,9 +89,9 @@ public class MainViewModel : ObservableObject
 
     #region PNGPath
 
-    private string _pngPath;
+    private string? _pngPath;
 
-    public string PNGPath
+    public string? PNGPath
     {
         get => _pngPath;
         set
@@ -107,11 +107,11 @@ public class MainViewModel : ObservableObject
     {
         var save = new SaveFileDialog
         {
-            FileName = Path.GetFileNameWithoutExtension(PSDPath),
+            FileName = Path.GetFileNameWithoutExtension(PSDPath)!,
             Filter = "PNG|*.png"
         };
         if (save.ShowDialog() != true) return;
-        File.Copy(PNGPath, save.FileName, true);
+        File.Copy(PNGPath!, save.FileName, true);
     }, () => !string.IsNullOrEmpty(PNGPath));
 
     public async Task Transform()
