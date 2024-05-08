@@ -17,10 +17,22 @@ public partial class MainWindow
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += WindowOnLoaded;
         Unloaded += WindowOnUnloaded;
     }
 
     public MainViewModel ConcreteDataContext => (MainViewModel)DataContext;
+
+    private void WindowOnLoaded(object sender, RoutedEventArgs e)
+    {
+        _ = ConcreteDataContext.Check();
+    }
+
+    private void WindowOnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (!Directory.Exists(MainViewModel.Folder)) return;
+        Directory.Delete(MainViewModel.Folder, true);
+    }
 
     private void PSDOnDrop(object sender, DragEventArgs e)
     {
@@ -28,12 +40,6 @@ public partial class MainWindow
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
         ConcreteDataContext.PSDPath = string.Empty;
         ConcreteDataContext.PSDPath = files[0];
-    }
-
-    private void WindowOnUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (!Directory.Exists(MainViewModel.Folder)) return;
-        Directory.Delete(MainViewModel.Folder, true);
     }
 }
 
@@ -114,7 +120,7 @@ public class MainViewModel : ObservableObject
         if (!File.Exists(PSDPath)) return;
         if (Busy)
         {
-            _ = new MessageBox { Title = "转换错误", Content = "正在转换，请等待转换完成。" }.ShowDialogAsync();
+            _ = new MessageBox { Title = "转换错误", Content = "正在转换，请等待转换完成。" }.ShowDialogAsync(false);
             return;
         }
 
@@ -150,11 +156,24 @@ public class MainViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync();
+            _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync(false);
         }
         finally
         {
             Busy = false;
+        }
+    }
+
+    public async Task Check()
+    {
+        try
+        {
+            var (c, o) = await Cmd("magick", "--version");
+            if (c != 0) throw new Exception($"本地未安装 ImageMagick, 推荐使用 scoop install imagemagick 安装\n{o}");
+        }
+        catch (Exception e)
+        {
+            _ = new MessageBox { Title = "环境错误", Content = e.Message }.ShowDialogAsync(false);
         }
     }
 
@@ -174,13 +193,7 @@ public class MainViewModel : ObservableObject
         }
         catch (Exception e)
         {
-            await new MessageBox
-            {
-                Title = "出错",
-                Content = e.Message
-            }.ShowDialogAsync();
+            return (-1, e.Message);
         }
-
-        return (-1, string.Empty);
     }
 }
