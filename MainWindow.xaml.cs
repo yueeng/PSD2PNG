@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using MessageBox = Wpf.Ui.Controls.MessageBox;
 
 namespace PSD2PNG;
@@ -13,7 +14,11 @@ namespace PSD2PNG;
 /// </summary>
 public partial class MainWindow
 {
-    public MainWindow() => InitializeComponent();
+    public MainWindow()
+    {
+        InitializeComponent();
+        Unloaded += WindowOnUnloaded;
+    }
 
     public MainViewModel ConcreteDataContext => (MainViewModel)DataContext;
 
@@ -21,6 +26,7 @@ public partial class MainWindow
     {
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
+        ConcreteDataContext.PSDPath = string.Empty;
         ConcreteDataContext.PSDPath = files[0];
     }
 
@@ -70,46 +76,74 @@ public class MainViewModel : ObservableObject
     public string PNGPath
     {
         get => _pngPath;
-        set => SetProperty(ref _pngPath, value);
+        set
+        {
+            SetProperty(ref _pngPath, value);
+            OnPropertyChanged(nameof(SaveCommand));
+        }
     }
 
     #endregion
 
-    #region Height
-
-    private int _height = 240;
-
-    public int Height
+    public ICommand SaveCommand => new RelayCommand(() =>
     {
-        get => _height;
-        set => SetProperty(ref _height, value);
-    }
-
-    #endregion
-
-    public ICommand TransformCommand => new AsyncRelayCommand(async () => await Transform());
+        var save = new SaveFileDialog
+        {
+            FileName = Path.GetFileNameWithoutExtension(PSDPath),
+            Filter = "PNG|*.png"
+        };
+        if (save.ShowDialog() != true) return;
+        File.Copy(PNGPath, save.FileName, true);
+    }, () => !string.IsNullOrEmpty(PNGPath));
 
     public async Task Transform()
     {
         if (string.IsNullOrEmpty(PSDPath)) return;
         if (!File.Exists(PSDPath)) return;
-        var folder = Path.Combine(Folder, Guid.NewGuid().ToString());
-        if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
-        var target = Path.Combine(folder, "output.png");
-        await Magick($"-depth 24 \"{PSDPath}\" \"{target}\"");
-        var pngs = Directory.GetFiles(folder, "*.png");
-        PreviewPath = pngs[0];
-        var q = Math.Sqrt(pngs.Length);
-        var w = (int)Math.Ceiling(q);
-        await Montage($"-geometry +10+10 -tile {w}x{w} \"{Path.Combine(folder, "output*.png")}\" \"{target}\"");
-        PNGPath = target;
+        try
+        {
+            var layers = await PsdLayers(PSDPath);
+            if (layers is null) return;
+            var folder = Path.Combine(Folder, Guid.NewGuid().ToString());
+            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+            var preview = Path.Combine(folder, "preview.png");
+            await PsdExport(PSDPath, 0, Path.Combine(folder, preview));
+            PreviewPath = preview;
+            foreach (var (it, i) in layers.Select((it, i) => (it, i)))
+            {
+                if (i == 0) continue;
+                if (it != "Over") continue;
+                var target = Path.Combine(folder, $"output-{i}.png");
+                await PsdExport(PSDPath, i, target);
+            }
+
+            var q = Math.Sqrt(layers.Count(l => l == "Over") - 1);
+            var w = (int)Math.Ceiling(q);
+            var h = (int)Math.Floor(q);
+            var output = Path.Combine(folder, "target.png");
+            var (c, o) = await Cmd("magick", $@"montage -depth 24 -background none -geometry +10+10 -tile {w}x{h} -set label "" "" ""{Path.Combine(folder, "output-*.png")}"" ""{output}""");
+            if (c != 0) throw new Exception($"{c}: {o}");
+            PNGPath = output;
+        }
+        catch (Exception e)
+        {
+            _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync();
+        }
     }
 
-    public static async Task<int> Magick(string args) => await Run("magick", args);
+    public static async Task<string[]?> PsdLayers(string file)
+    {
+        var (c, o) = await Cmd("magick", $@"""{file}"" -format ""%[compose],"" info:");
+        return c != 0 ? default : o.TrimEnd(',').Split(',');
+    }
 
-    public static async Task<int> Montage(string args) => await Run("montage", args);
+    public static async Task<bool> PsdExport(string file, int layer, string target)
+    {
+        var (c, _) = await Cmd("magick", $@"convert -depth 24 ""{file}[{layer}]"" ""{target}""");
+        return c == 0;
+    }
 
-    public static async Task<int> Run(string cmd, string args)
+    public static async Task<(int, string)> Cmd(string cmd, string args)
     {
         try
         {
@@ -120,8 +154,8 @@ public class MainViewModel : ObservableObject
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
             process.Start();
-            await process.StandardOutput.ReadToEndAsync();
-            return process.ExitCode;
+            var output = await process.StandardOutput.ReadToEndAsync();
+            return (process.ExitCode, output);
         }
         catch (Exception e)
         {
@@ -132,6 +166,6 @@ public class MainViewModel : ObservableObject
             }.ShowDialogAsync();
         }
 
-        return -1;
+        return (-1, string.Empty);
     }
 }

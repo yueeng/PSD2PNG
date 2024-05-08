@@ -6,9 +6,9 @@
                  xmlns:local="clr-namespace:PSD2PNG"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  mc:Ignorable="d"
+                 WindowStartupLocation="CenterScreen"
                  AllowDrop="True"
                  Drop="PSDOnDrop"
-                 Unloaded="WindowOnUnloaded"
                  Title="PSD2PNG"
                  Height="800"
                  Width="1280">
@@ -23,23 +23,8 @@
         </Grid.RowDefinitions>
         <ui:TitleBar Title="PSD2PNG" />
         <Grid Grid.Row="1">
-            <ui:CardControl>
-                <ui:CardControl.Header>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding PSDPath}"
-                                   VerticalAlignment="Center" />
-                        <ui:TextBox Grid.Column="1"
-                                    Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}"
-                                    MinWidth="100"
-                                    PlaceholderEnabled="True"
-                                    PlaceholderText="高" />
-                    </Grid>
-                </ui:CardControl.Header>
-                <Button Content="转换" Command="{Binding TransformCommand}" />
+            <ui:CardControl Header="{Binding PSDPath}">
+                <Button Content="保存" Command="{Binding SaveCommand}" />
             </ui:CardControl>
         </Grid>
         <Grid Grid.Row="2">
