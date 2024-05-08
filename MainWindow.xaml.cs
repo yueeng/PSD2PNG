@@ -14,11 +14,12 @@ namespace PSD2PNG;
 /// </summary>
 public partial class MainWindow
 {
-    public MainWindow()
+    public MainWindow(string? psd = null)
     {
         InitializeComponent();
         Loaded += WindowOnLoaded;
         Unloaded += WindowOnUnloaded;
+        ConcreteDataContext.PSDPath = psd;
     }
 
     public MainViewModel ConcreteDataContext => (MainViewModel)DataContext;
