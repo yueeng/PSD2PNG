@@ -99,3 +99,22 @@ jobs:
       with:
         name: PSD2PNG.exe
         path: .\publish\*
+
+    - name: Time tick
+      run: echo "time_tick=$(date '+%Y%m%d%H%M')" >> $GITHUB_ENV
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: ${{ env.time_tick }}
+        name: pre-release ${{ env.time_tick }}
+        body: |
+          - ${{ github.event.head_commit.message }}
+          - ${{ github.sha }}
+          - ${{ github.ref }}
+        draft: false
+        prerelease: true
+        files: |
+          ${{ github.workspace }}/publish/PSD2PNG.exe
