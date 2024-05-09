@@ -57,7 +57,7 @@ jobs:
 
     env:
       Solution_Name: PSD2PNG.sln                                # Replace with your solution name, i.e. MyWpfApp.sln.
-      Wap_Project_Path: PSD2PNG.csproj                          # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      Project_Name: PSD2PNG.csproj                              # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
 
     steps:
     - name: Checkout
@@ -83,7 +83,7 @@ jobs:
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: dotnet publish $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:PublishDir=$env:PublishDir /p:TargetFramework=$env:TargetFramework /p:RuntimeIdentifier=$env:RuntimeIdentifier /p:SelfContained=$env:SelfContained /p:PublishSingleFile=$env:PublishSingleFile /p:PublishReadyToRun=$env:PublishReadyToRun
+      run: dotnet publish $env:Project_Name /p:Configuration=$env:Configuration /p:PublishDir=$env:PublishDir /p:TargetFramework=$env:TargetFramework /p:RuntimeIdentifier=$env:RuntimeIdentifier /p:SelfContained=$env:SelfContained /p:PublishSingleFile=$env:PublishSingleFile /p:PublishReadyToRun=$env:PublishReadyToRun
       env:
         PublishDir: publish
         TargetFramework: net8.0-windows
@@ -93,9 +93,9 @@ jobs:
         PublishReadyToRun: true
         Configuration: ${{ matrix.configuration }}
 
-    # Upload the MSIX package: https://github.com/marketplace/actions/upload-a-build-artifact
+    # Upload the exe: https://github.com/marketplace/actions/upload-a-build-artifact
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: MSIX Package
+        name: PSD2PNG.exe
         path: .\publish\*
