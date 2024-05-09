@@ -63,9 +63,9 @@ jobs:
     steps:
     - name: Time tick
       run: |
-        echo ("TimeTick=" + $(Get-Date -Format 'yyyyMMddHHmm')) >> $env:GITHUB_ENV
-        Write-Host ${{ env.TimeTick }}
-        Write-Host $env:TimeTick
+        echo "Time_Tick=$(Get-Date -Format 'yyyyMMddHHmm')" >> $env:GITHUB_ENV
+        Write-Host ${{ env.Time_Tick }}
+        Write-Host $env:Time_Tick
         Write-Host "Time tick: $env:Time_Tick"
     - name: Checkout
       uses: actions/checkout@v4
@@ -113,8 +113,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
       with:
-        tag_name: $(Get-Date -Format "yyyyMMddHHmm")
-        name: pre-release $(Get-Date -Format "yyyyMMddHHmm")
+        tag_name: ${{ env.Time_Tick }}
+        name: pre-release ${{ env.Time_Tick }}
         body: |
           - ${{ github.event.head_commit.message }}
           - ${{ github.sha }}
