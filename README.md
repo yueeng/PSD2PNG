@@ -13,3 +13,8 @@ scoop install imagemagick
 ### Reference for 2D bin packing algorithm:
 
 https://github.com/jakesgordon/bin-packing
+
+### Dependencies
+
+https://github.com/CommunityToolkit/dotnet
+https://github.com/lepoco/wpfui
