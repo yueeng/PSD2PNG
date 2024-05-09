@@ -47,7 +47,9 @@ on:
 jobs:
 
   build:
-
+    concurrency:
+      group: build
+      cancel-in-progress: true
     strategy:
       matrix:
         configuration: [Release]
@@ -61,7 +63,7 @@ jobs:
     steps:
     - name: Time tick
       run: |
-        echo "timeTick=$(Get-Date -Format 'yyyyMMddHHmm')" >> $env:GITHUB_ENV
+        Add-Content $env:GITHUB_ENV "timeTick=$(Get-Date -Format 'yyyyMMddHHmm')"
         Write-Host ${{ env.timeTick }}
         Write-Host $env:timeTick
         Write-Host "Time tick: $env:Time_Tick"
