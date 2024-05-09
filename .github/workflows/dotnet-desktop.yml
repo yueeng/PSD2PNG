@@ -63,9 +63,9 @@ jobs:
     steps:
     - name: Time tick
       run: |
-        Add-Content $env:GITHUB_ENV "timeTick=$(Get-Date -Format 'yyyyMMddHHmm')"
-        Write-Host ${{ env.timeTick }}
-        Write-Host $env:timeTick
+        echo ("TimeTick=" + $(Get-Date -Format 'yyyyMMddHHmm')) >> $env:GITHUB_ENV
+        Write-Host ${{ env.TimeTick }}
+        Write-Host $env:TimeTick
         Write-Host "Time tick: $env:Time_Tick"
     - name: Checkout
       uses: actions/checkout@v4
