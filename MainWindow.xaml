@@ -30,8 +30,12 @@
                          Visibility="{Binding Busy, Converter={StaticResource b2v}}"
                          VerticalAlignment="Bottom" />
             <ui:CardControl Header="{Binding PSDPath}">
+                <StackPanel Orientation="Horizontal">
+                <Button Content="保存预览"
+                        Command="{Binding SavePreviewCommand}" />
                 <Button Content="保存"
                         Command="{Binding SaveCommand}" />
+                </StackPanel>
             </ui:CardControl>
         </Grid>
         <Grid Grid.Row="2">

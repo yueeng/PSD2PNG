@@ -1,7 +1,10 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -82,7 +85,11 @@ public class MainViewModel : ObservableObject
     public string PreviewPath
     {
         get => _previewPath;
-        set => SetProperty(ref _previewPath, value);
+        set
+        {
+            SetProperty(ref _previewPath, value);
+            OnPropertyChanged(nameof(SavePreviewCommand));
+        }
     }
 
     #endregion
@@ -103,16 +110,21 @@ public class MainViewModel : ObservableObject
 
     #endregion
 
-    public ICommand SaveCommand => new RelayCommand(() =>
+    private static void Save(string source, string name, string ex = "")
     {
         var save = new SaveFileDialog
         {
-            FileName = Path.GetFileNameWithoutExtension(PSDPath),
+            InitialDirectory = Path.GetDirectoryName(name),
+            FileName = Path.GetFileNameWithoutExtension(name) + ex,
             Filter = "PNG|*.png"
         };
         if (save.ShowDialog() != true) return;
-        File.Copy(PNGPath, save.FileName, true);
-    }, () => !string.IsNullOrEmpty(PNGPath));
+        File.Copy(source, save.FileName, true);
+    }
+
+    public ICommand SavePreviewCommand => new RelayCommand(() => Save(PreviewPath, PSDPath, " - preview"), () => !string.IsNullOrEmpty(PreviewPath));
+
+    public ICommand SaveCommand => new RelayCommand(() => Save(PNGPath, PSDPath, " - flatten"), () => !string.IsNullOrEmpty(PNGPath));
 
     public async Task Transform()
     {
@@ -127,32 +139,79 @@ public class MainViewModel : ObservableObject
         Busy = true;
         try
         {
-            var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose],"" info:");
+            #region 获取图层信息
+
+            var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose]:%[width]x%[height],"" info:");
             if (c != 0) throw new Exception($"magick: {c}\n{o}");
-            var layers = o.TrimEnd(',').Split(',');
-            if (layers.Length == 0) throw new Exception($"magick: {c}\n{o}");
+            var regex = new Regex(@"^(\w+):(\d+)x(\d+)$");
+            var layers = o.TrimEnd(',').Split(',')
+                .Select(i => regex.Match(i))
+                .Select((it, i) => (I: i, L: it.Success ? (O: it.Groups[1].Value == "Over", W: int.Parse(it.Groups[2].Value), H: int.Parse(it.Groups[3].Value)) : default))
+                .ToList();
+            if (layers.Count == 0) throw new Exception($"magick: {c}\n{o}");
+
+            #endregion
+
+            #region 导出图层
+
             var folder = Path.Combine(Folder, Guid.NewGuid().ToString());
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
             var preview = Path.Combine(folder, "preview.png");
-            (c, o) = await Cmd("magick", $@"convert -depth 24 ""{PSDPath}[0]"" ""{preview}""");
+            (c, o) = await Cmd("magick", $@"convert ""{PSDPath}[0]"" ""{preview}""");
             if (c != 0) throw new Exception($"convert[0]: {c}\n{o}");
             PreviewPath = preview;
-            foreach (var (it, i) in layers.Select((it, i) => (it, i)))
+            foreach (var (i, it) in layers)
             {
                 if (i == 0) continue;
-                if (it != "Over") continue;
+                if (!it.O) continue;
                 var target = Path.Combine(folder, $"output-{i}.png");
-                (c, o) = await Cmd("magick", $@"convert -depth 24 ""{PSDPath}[{i}]"" ""{target}""");
+                (c, o) = await Cmd("magick", $@"convert ""{PSDPath}[{i}]"" ""{target}""");
                 if (c != 0) throw new Exception($"convert[{i}]: {c}\n{o}");
             }
 
-            var q = Math.Sqrt(layers.Count(l => l == "Over") - 1);
-            var w = (int)Math.Ceiling(q);
-            var h = (int)Math.Floor(q);
+            #endregion
+
+            #region 合并PNG
+
             var output = Path.Combine(folder, "target.png");
-            (c, o) = await Cmd("magick", $@"montage -depth 24 -background none -geometry +10+10 -tile {w}x{h} -set label "" "" ""{Path.Combine(folder, "output-*.png")}"" ""{output}""");
-            if (c != 0) throw new Exception($"montage: {c}\n{o}");
+            // var q = Math.Sqrt(layers.Count(l => l.Item2.O) - 1);
+            // var w = (int)Math.Ceiling(q);
+            // var h = (int)Math.Floor(q);
+            // (c, o) = await Cmd("magick", $@"montage -background none -geometry +10+10 -tile {w}x{h} -set label "" "" ""{Path.Combine(folder, "output-*.png")}"" ""{output}""");
+            // if (c != 0) throw new Exception($"montage: {c}\n{o}");
+
+            var overlay = layers.Where(i => i.I != 0 && i.L.O).ToDictionary(i => new Packer.Box(i.L.W + 20, i.L.H + 20), i => i);
+            var packer = new Packer();
+            packer.AddBox(overlay.Keys.ToArray());
+            packer.Fit(Packer.FitType.MaxSide);
+
+            var drawingVisual = new DrawingVisual();
+            using (var drawingContext = drawingVisual.RenderOpen())
+            {
+                foreach (var i in overlay)
+                {
+                    var overlayImage = new BitmapImage(new Uri(Path.Combine(folder, $"output-{i.Value.I}.png"), UriKind.Relative));
+                    drawingContext.DrawImage(overlayImage, new Rect(i.Key.Fit!.X + 10, i.Key.Fit.Y + 10, overlayImage.PixelWidth, overlayImage.PixelHeight));
+                }
+            }
+
+            var baseImage = new RenderTargetBitmap((int)packer.Root!.W, (int)packer.Root.H, 96, 96, PixelFormats.Pbgra32);
+            baseImage.Render(drawingVisual);
+
+            #region Save the RenderTargetBitmap as a PNG file
+
+            var pngEncoder = new PngBitmapEncoder();
+            pngEncoder.Frames.Add(BitmapFrame.Create(baseImage));
+            await using (var stream = new FileStream(output, FileMode.CreateNew))
+            {
+                pngEncoder.Save(stream);
+            }
+
+            #endregion
+
             PNGPath = output;
+
+            #endregion
         }
         catch (Exception e)
         {
