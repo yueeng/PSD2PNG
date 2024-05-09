@@ -58,13 +58,12 @@ jobs:
     env:
       Solution_Name: PSD2PNG.sln                                # Replace with your solution name, i.e. MyWpfApp.sln.
       Project_Name: PSD2PNG.csproj                              # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      Time_Tick: $(Get-Date -Format "yyyyMMddHHmm")                # Time tick for the release tag
 
     steps:
     - name: Time tick
       run: |
-        $time_tick = Get-Date -Format "yyyyMMddHHmm"
-        Write-Host "time_tick=$time_tick" >> $env:GITHUB_ENV
-        echo ${{ env.time_tick }}
+        echo "Time tick: $env:Time_Tick"
     - name: Checkout
       uses: actions/checkout@v4
       with:
