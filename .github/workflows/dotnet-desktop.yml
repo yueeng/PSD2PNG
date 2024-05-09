@@ -77,13 +77,13 @@ jobs:
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
-      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration
+      run: dotnet restore /p:Configuration=$env:Configuration
       env:
         Configuration: ${{ matrix.configuration }}
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: msbuild $env:Wap_Project_Path /t:Publish /p:Configuration=$env:Configuration /p:PublishDir=$env:PublishDir /p:TargetFramework=$env:TargetFramework /p:RuntimeIdentifier=$env:RuntimeIdentifier /p:SelfContained=$env:SelfContained /p:PublishSingleFile=$env:PublishSingleFile /p:PublishReadyToRun=$env:PublishReadyToRun
+      run: dotnet publish $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:PublishDir=$env:PublishDir /p:TargetFramework=$env:TargetFramework /p:RuntimeIdentifier=$env:RuntimeIdentifier /p:SelfContained=$env:SelfContained /p:PublishSingleFile=$env:PublishSingleFile /p:PublishReadyToRun=$env:PublishReadyToRun
       env:
         PublishDir: publish
         TargetFramework: net8.0-windows
