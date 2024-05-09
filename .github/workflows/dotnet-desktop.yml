@@ -63,6 +63,8 @@ jobs:
     steps:
     - name: Time tick
       run: |
+        echo $(Get-Date -Format "yyyyMMddHHmm")
+        echo $env:Time_Tick
         echo "Time tick: $env:Time_Tick"
     - name: Checkout
       uses: actions/checkout@v4
