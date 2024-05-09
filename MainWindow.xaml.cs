@@ -123,9 +123,9 @@ public class MainViewModel : ObservableObject
         File.Copy(source, save.FileName, true);
     }
 
-    public ICommand SavePreviewCommand => new RelayCommand(() => Save(PreviewPath, PSDPath, " - preview"), () => !string.IsNullOrEmpty(PreviewPath));
+    public ICommand SavePreviewCommand => new RelayCommand(() => Save(PreviewPath!, PSDPath!, " - preview"), () => !string.IsNullOrEmpty(PreviewPath));
 
-    public ICommand SaveCommand => new RelayCommand(() => Save(PNGPath, PSDPath, " - flatten"), () => !string.IsNullOrEmpty(PNGPath));
+    public ICommand SaveCommand => new RelayCommand(() => Save(PNGPath!, PSDPath!, " - flatten"), () => !string.IsNullOrEmpty(PNGPath));
 
     public async Task Transform()
     {
