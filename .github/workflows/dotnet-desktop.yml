@@ -122,5 +122,4 @@ jobs:
           - ${{ github.ref }}
         draft: false
         prerelease: true
-        files: |
-          ${{ github.workspace }}/publish/PSD2PNG.exe
+        files: .\publish\*
