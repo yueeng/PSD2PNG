@@ -60,6 +60,11 @@ jobs:
       Project_Name: PSD2PNG.csproj                              # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
 
     steps:
+    - name: Time tick
+      run: |
+        $time_tick = Get-Date -Format "yyyyMMddHHmm"
+        Write-Host "time_tick=$time_tick" >> $env:GITHUB_ENV
+        echo ${{ env.time_tick }}
     - name: Checkout
       uses: actions/checkout@v4
       with:
@@ -100,15 +105,12 @@ jobs:
         name: PSD2PNG.exe
         path: .\publish\*
 
-    - name: Time tick
-      run: |
-        $time_tick = Get-Date -Format "yyyyMMddHHmm"
-        Write-Host "time_tick=$time_tick" >> $env:GITHUB_ENV
     - name: Create Release
       id: create_release
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        time_tick: ${{ env.time_tick }}
       with:
         tag_name: ${{ env.time_tick }}
         name: pre-release ${{ env.time_tick }}
