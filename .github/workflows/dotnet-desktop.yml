@@ -122,4 +122,4 @@ jobs:
           - ${{ github.ref }}
         draft: false
         prerelease: true
-        files: .\publish\*
+        files: ./publish/*.exe
