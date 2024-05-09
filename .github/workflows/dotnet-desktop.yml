@@ -63,63 +63,63 @@ jobs:
     steps:
     - name: Time tick
       run: |
-        echo "Time_Tick=$(Get-Date -Format 'yyyyMMddHHmm')" >> $env:GITHUB_ENV
+        echo "Time_Tick=$(Get-Date -Format 'yyyyMMddHHmm')" >> $GITHUB_ENV
         Write-Host ${{ env.Time_Tick }}
         Write-Host $env:Time_Tick
         Write-Host "Time tick: $env:Time_Tick"
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    # Install the .NET Core workload
-    - name: Install .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v2
-
-    # Restore the application to populate the obj folder with RuntimeIdentifiers
-    - name: Restore the application
-      run: dotnet restore /p:Configuration=$env:Configuration
-      env:
-        Configuration: ${{ matrix.configuration }}
-
-    # Create the app package by building and packaging the Windows Application Packaging project
-    - name: Create the app package
-      run: dotnet publish $env:Project_Name /p:Configuration=$env:Configuration /p:PublishDir=$env:PublishDir /p:TargetFramework=$env:TargetFramework /p:RuntimeIdentifier=$env:RuntimeIdentifier /p:SelfContained=$env:SelfContained /p:PublishSingleFile=$env:PublishSingleFile /p:PublishReadyToRun=$env:PublishReadyToRun
-      env:
-        PublishDir: publish
-        TargetFramework: net8.0-windows
-        RuntimeIdentifier: win-x64
-        SelfContained: false
-        PublishSingleFile: true
-        PublishReadyToRun: true
-        Configuration: ${{ matrix.configuration }}
-
-    # Upload the exe: https://github.com/marketplace/actions/upload-a-build-artifact
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: PSD2PNG.exe
-        path: .\publish\*
-
-    - name: Create Release
-      id: create_release
-      uses: softprops/action-gh-release@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-      with:
-        tag_name: ${{ env.Time_Tick }}
-        name: pre-release ${{ env.Time_Tick }}
-        body: |
-          - ${{ github.event.head_commit.message }}
-          - ${{ github.sha }}
-          - ${{ github.ref }}
-        draft: false
-        prerelease: true
-        files: |
-          ${{ github.workspace }}/publish/PSD2PNG.exe
+#    - name: Checkout
+#      uses: actions/checkout@v4
+#      with:
+#        fetch-depth: 0
+#
+#    # Install the .NET Core workload
+#    - name: Install .NET Core
+#      uses: actions/setup-dotnet@v4
+#      with:
+#        dotnet-version: 8.0.x
+#
+#    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+#    - name: Setup MSBuild.exe
+#      uses: microsoft/setup-msbuild@v2
+#
+#    # Restore the application to populate the obj folder with RuntimeIdentifiers
+#    - name: Restore the application
+#      run: dotnet restore /p:Configuration=$env:Configuration
+#      env:
+#        Configuration: ${{ matrix.configuration }}
+#
+#    # Create the app package by building and packaging the Windows Application Packaging project
+#    - name: Create the app package
+#      run: dotnet publish $env:Project_Name /p:Configuration=$env:Configuration /p:PublishDir=$env:PublishDir /p:TargetFramework=$env:TargetFramework /p:RuntimeIdentifier=$env:RuntimeIdentifier /p:SelfContained=$env:SelfContained /p:PublishSingleFile=$env:PublishSingleFile /p:PublishReadyToRun=$env:PublishReadyToRun
+#      env:
+#        PublishDir: publish
+#        TargetFramework: net8.0-windows
+#        RuntimeIdentifier: win-x64
+#        SelfContained: false
+#        PublishSingleFile: true
+#        PublishReadyToRun: true
+#        Configuration: ${{ matrix.configuration }}
+#
+#    # Upload the exe: https://github.com/marketplace/actions/upload-a-build-artifact
+#    - name: Upload build artifacts
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: PSD2PNG.exe
+#        path: .\publish\*
+#
+#    - name: Create Release
+#      id: create_release
+#      uses: softprops/action-gh-release@v2
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+#      with:
+#        tag_name: ${{ env.Time_Tick }}
+#        name: pre-release ${{ env.Time_Tick }}
+#        body: |
+#          - ${{ github.event.head_commit.message }}
+#          - ${{ github.sha }}
+#          - ${{ github.ref }}
+#        draft: false
+#        prerelease: true
+#        files: |
+#          ${{ github.workspace }}/publish/PSD2PNG.exe
