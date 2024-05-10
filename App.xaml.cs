@@ -1,4 +1,7 @@
 ﻿using System.Windows;
+using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
+using Wpf.Ui.Appearance;
 
 namespace PSD2PNG;
 
@@ -13,4 +16,6 @@ public partial class App
         Current.MainWindow = new MainWindow(e.Args.FirstOrDefault());
         Current.MainWindow.Show();
     }
+
+    public ICommand SwitchThemeCommand { get; } = new RelayCommand(() => ApplicationThemeManager.Apply(ApplicationThemeManager.GetAppTheme() == ApplicationTheme.Light ? ApplicationTheme.Dark : ApplicationTheme.Light));
 }

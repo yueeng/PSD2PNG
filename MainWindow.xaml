@@ -29,14 +29,50 @@
             <ProgressBar IsIndeterminate="{Binding Busy}"
                          Visibility="{Binding Busy, Converter={StaticResource b2v}}"
                          VerticalAlignment="Bottom" />
-            <ui:CardControl Header="{Binding PSDPath}">
-                <StackPanel Orientation="Horizontal">
-                <Button Content="保存预览"
-                        Command="{Binding SavePreviewCommand}" />
-                <Button Content="保存"
-                        Command="{Binding SaveCommand}" />
+            <ui:CardExpander>
+                <ui:CardExpander.Header>
+                    <DockPanel HorizontalAlignment="Stretch">
+                        <Button Content="保存结果"
+                                Margin="4 0"
+                                DockPanel.Dock="Right"
+                                Command="{Binding SaveCommand}" />
+                        <Button Content="重新转换"
+                                Margin="4 0"
+                                DockPanel.Dock="Right"
+                                Command="{Binding TransformCommand}" />
+                        <Button Margin="4 0"
+                                DockPanel.Dock="Right"
+                                Command="{Binding OpenCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button"
+                                       BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Content"
+                                            Value="加载PSD" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Busy}"
+                                                     Value="True">
+                                            <Setter Property="Content"
+                                                    Value="停止" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <TextBlock Text="{Binding PSDPath}"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                </ui:CardExpander.Header>
+                <StackPanel Orientation="Vertical">
+                    <ui:CardControl Header="切换主题">
+                        <ui:Button Command="{Binding (local:App.SwitchThemeCommand), Source={x:Static Application.Current}}"
+                                   Icon="{ui:SymbolIcon WeatherSunny24}" />
+                    </ui:CardControl>
+                    <ui:CardControl Header="清除结果">
+                        <ui:Button Command="{Binding CleanupCommand}"
+                                   Icon="{ui:SymbolIcon Delete24}" />
+                    </ui:CardControl>
                 </StackPanel>
-            </ui:CardControl>
+            </ui:CardExpander>
         </Grid>
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
@@ -44,8 +80,16 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
-            <GroupBox Header="PSD"
-                      Margin="4">
+            <GroupBox Margin="4">
+                <GroupBox.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="PSD" />
+                        <ui:HyperlinkButton Command="{Binding SavePreviewCommand}"
+                                            Icon="{ui:SymbolIcon Save16}"
+                                            Content="保存" />
+                    </StackPanel>
+                </GroupBox.Header>
                 <Image Source="{Binding PreviewPath, IsAsync=True}" />
             </GroupBox>
             <GridSplitter Grid.Column="1"
@@ -53,8 +97,16 @@
                           Background="Transparent"
                           ResizeBehavior="PreviousAndNext" />
             <GroupBox Grid.Column="2"
-                      Header="PNG"
                       Margin="4">
+                <GroupBox.Header>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="PNG" />
+                        <ui:HyperlinkButton Command="{Binding SaveCommand}"
+                                            Icon="{ui:SymbolIcon Save16}"
+                                            Content="保存" />
+                    </StackPanel>
+                </GroupBox.Header>
                 <Image Source="{Binding PNGPath, IsAsync=True}" />
             </GroupBox>
         </Grid>

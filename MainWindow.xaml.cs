@@ -21,28 +21,17 @@ public partial class MainWindow
     {
         InitializeComponent();
         Loaded += WindowOnLoaded;
-        Unloaded += WindowOnUnloaded;
         ConcreteDataContext.PSDPath = psd;
     }
 
     public MainViewModel ConcreteDataContext => (MainViewModel)DataContext;
 
-    private void WindowOnLoaded(object sender, RoutedEventArgs e)
-    {
-        _ = ConcreteDataContext.Check();
-    }
-
-    private void WindowOnUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (!Directory.Exists(MainViewModel.Folder)) return;
-        Directory.Delete(MainViewModel.Folder, true);
-    }
+    private void WindowOnLoaded(object sender, RoutedEventArgs e) => _ = ConcreteDataContext.Check();
 
     private void PSDOnDrop(object sender, DragEventArgs e)
     {
         if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
         if (e.Data.GetData(DataFormats.FileDrop) is not string[] files || files.Length == 0) return;
-        ConcreteDataContext.PSDPath = null;
         ConcreteDataContext.PSDPath = files[0];
     }
 }
@@ -58,7 +47,11 @@ public class MainViewModel : ObservableObject
     public bool Busy
     {
         get => _busy;
-        set => SetProperty(ref _busy, value);
+        set
+        {
+            SetProperty(ref _busy, value);
+            OnPropertyChanged(nameof(TransformCommand));
+        }
     }
 
     #endregion
@@ -72,7 +65,8 @@ public class MainViewModel : ObservableObject
         get => _psdPath;
         set
         {
-            if (!SetProperty(ref _psdPath, value)) return;
+            SetProperty(ref _psdPath, value);
+            OnPropertyChanged(nameof(TransformCommand));
             _ = Transform();
         }
     }
@@ -111,6 +105,23 @@ public class MainViewModel : ObservableObject
 
     #endregion
 
+    public ICommand CleanupCommand => new AsyncRelayCommand(async () =>
+    {
+        try
+        {
+            PreviewPath = null;
+            PNGPath = null;
+            PSDPath = null;
+            await Task.Yield();
+            if (!Directory.Exists(Folder)) return;
+            Directory.Delete(Folder, true);
+        }
+        catch
+        {
+            // ignored
+        }
+    });
+
     private static void Save(string source, string name, string ex = "")
     {
         var save = new SaveFileDialog
@@ -127,6 +138,23 @@ public class MainViewModel : ObservableObject
 
     public ICommand SaveCommand => new RelayCommand(() => Save(PNGPath!, PSDPath!, " - flatten"), () => !string.IsNullOrEmpty(PNGPath));
 
+    public ICommand TransformCommand => new RelayCommand(() => _ = Transform(), () => !string.IsNullOrEmpty(PSDPath) && !Busy);
+
+    public ICommand OpenCommand => new RelayCommand(() =>
+    {
+        if (Busy)
+        {
+            _token?.Cancel();
+            return;
+        }
+
+        var open = new OpenFileDialog { Filter = "PSD|*.psd" };
+        if (open.ShowDialog() != true) return;
+        PSDPath = open.FileName;
+    });
+
+    private CancellationTokenSource? _token;
+
     public async Task Transform()
     {
         if (string.IsNullOrEmpty(PSDPath)) return;
@@ -137,9 +165,14 @@ public class MainViewModel : ObservableObject
             return;
         }
 
+        var token = (_token = new()).Token;
         Busy = true;
         try
         {
+            PreviewPath = null;
+            PNGPath = null;
+            await Task.Yield();
+
             #region 获取图层信息
 
             var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose]:%[width]x%[height],"" info:");
@@ -155,6 +188,7 @@ public class MainViewModel : ObservableObject
 
             #region 导出图层
 
+            token.ThrowIfCancellationRequested();
             var folder = Path.Combine(Folder, Guid.NewGuid().ToString());
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
             var preview = Path.Combine(folder, "preview.png");
@@ -163,6 +197,7 @@ public class MainViewModel : ObservableObject
             PreviewPath = preview;
             foreach (var (i, it) in layers)
             {
+                token.ThrowIfCancellationRequested();
                 if (i == 0) continue;
                 if (!it.O) continue;
                 var target = Path.Combine(folder, $"output-{i}.png");
@@ -174,6 +209,7 @@ public class MainViewModel : ObservableObject
 
             #region 合并PNG
 
+            token.ThrowIfCancellationRequested();
             var output = Path.Combine(folder, "target.png");
             // var q = Math.Sqrt(layers.Count(l => l.Item2.O) - 1);
             // var w = (int)Math.Ceiling(q);
@@ -214,13 +250,17 @@ public class MainViewModel : ObservableObject
 
             #endregion
         }
+        catch when (token.IsCancellationRequested)
+        {
+            // ignored
+        }
         catch (Exception e)
         {
-            _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync(false);
+            _ = new MessageBox { Title = "转换错误", Content = e.Message }.ShowDialogAsync(false, token);
         }
         finally
         {
-            Busy = false;
+            if (token == _token.Token) Busy = false;
         }
     }
 
