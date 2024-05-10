@@ -26,7 +26,7 @@ public partial class MainWindow
 
     public MainViewModel ConcreteDataContext => (MainViewModel)DataContext;
 
-    private void WindowOnLoaded(object sender, RoutedEventArgs e) => _ = ConcreteDataContext.Check();
+    private void WindowOnLoaded(object sender, RoutedEventArgs e) => _ = MainViewModel.CheckImageMagick();
 
     private void PSDOnDrop(object sender, DragEventArgs e)
     {
@@ -175,7 +175,7 @@ public class MainViewModel : ObservableObject
 
             #region 获取图层信息
 
-            var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose]:%[width]x%[height],"" info:");
+            var (c, o) = await Cmd("magick", $@"""{PSDPath}"" -format ""%[compose]:%[width]x%[height],"" info:", token);
             if (c != 0) throw new Exception($"magick: {c}\n{o}");
             var regex = new Regex(@"^(\w+):(\d+)x(\d+)$");
             var layers = o.TrimEnd(',').Split(',')
@@ -192,7 +192,7 @@ public class MainViewModel : ObservableObject
             var folder = Path.Combine(Folder, Guid.NewGuid().ToString());
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
             var preview = Path.Combine(folder, "preview.png");
-            (c, o) = await Cmd("magick", $@"convert ""{PSDPath}[0]"" ""{preview}""");
+            (c, o) = await Cmd("magick", $@"convert ""{PSDPath}[0]"" ""{preview}""", token);
             if (c != 0) throw new Exception($"convert[0]: {c}\n{o}");
             PreviewPath = preview;
             foreach (var (i, it) in layers)
@@ -201,7 +201,7 @@ public class MainViewModel : ObservableObject
                 if (i == 0) continue;
                 if (!it.O) continue;
                 var target = Path.Combine(folder, $"output-{i}.png");
-                (c, o) = await Cmd("magick", $@"convert ""{PSDPath}[{i}]"" ""{target}""");
+                (c, o) = await Cmd("magick", $@"convert ""{PSDPath}[{i}]"" ""{target}""", token);
                 if (c != 0) throw new Exception($"convert[{i}]: {c}\n{o}");
             }
 
@@ -264,11 +264,11 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    public async Task Check()
+    public static async Task CheckImageMagick()
     {
         try
         {
-            var (c, o) = await Cmd("magick", "--version");
+            var (c, o) = await Cmd("magick", "--version", default);
             if (c != 0) throw new Exception($"本地未安装 ImageMagick, 推荐使用 scoop install imagemagick 安装\n{o}");
         }
         catch (Exception e)
@@ -277,7 +277,7 @@ public class MainViewModel : ObservableObject
         }
     }
 
-    public static async Task<(int, string)> Cmd(string cmd, string args)
+    public static async Task<(int, string)> Cmd(string cmd, string args, CancellationToken token)
     {
         try
         {
@@ -288,7 +288,8 @@ public class MainViewModel : ObservableObject
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
             process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync(token);
+            var output = await process.StandardOutput.ReadToEndAsync(token);
             return (process.ExitCode, output);
         }
         catch (Exception e)
