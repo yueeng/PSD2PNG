@@ -63,6 +63,13 @@
                     </DockPanel>
                 </ui:CardExpander.Header>
                 <StackPanel Orientation="Vertical">
+                    <ui:CardControl Header="平铺间距">
+                        <ui:NumberBox Value="{Binding Geometry, UpdateSourceTrigger=PropertyChanged}"
+                                      Maximum="100"
+                                      Minimum="0"
+                                      SmallChange="1"
+                                      Icon="{ui:SymbolIcon NumberSymbolSquare24}" />
+                    </ui:CardControl>
                     <ui:CardControl Header="切换主题">
                         <ui:Button Command="{Binding (local:App.SwitchThemeCommand), Source={x:Static Application.Current}}"
                                    Icon="{ui:SymbolIcon WeatherSunny24}" />

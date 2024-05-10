@@ -105,6 +105,18 @@ public class MainViewModel : ObservableObject
 
     #endregion
 
+    #region Geometry
+
+    private int _geometry = 10;
+
+    public int Geometry
+    {
+        get => _geometry;
+        set => SetProperty(ref _geometry, value);
+    }
+
+    #endregion
+
     public ICommand CleanupCommand => new AsyncRelayCommand(async () =>
     {
         try
@@ -217,7 +229,8 @@ public class MainViewModel : ObservableObject
             // (c, o) = await Cmd("magick", $@"montage -background none -geometry +10+10 -tile {w}x{h} -set label "" "" ""{Path.Combine(folder, "output-*.png")}"" ""{output}""");
             // if (c != 0) throw new Exception($"montage: {c}\n{o}");
 
-            var overlay = layers.Where(i => i.I != 0 && i.L.O).ToDictionary(i => new Packer.Box(i.L.W + 20, i.L.H + 20), i => i);
+            var geometry = Geometry;
+            var overlay = layers.Where(i => i.I != 0 && i.L.O).ToDictionary(i => new Packer.Box(i.L.W + geometry * 2, i.L.H + geometry * 2), i => i);
             var packer = new Packer();
             packer.AddBox(overlay.Keys.ToArray());
             packer.Fit(Packer.FitType.MaxSide);
@@ -228,7 +241,7 @@ public class MainViewModel : ObservableObject
                 foreach (var i in overlay)
                 {
                     var overlayImage = new BitmapImage(new Uri(Path.Combine(folder, $"output-{i.Value.I}.png"), UriKind.Relative));
-                    drawingContext.DrawImage(overlayImage, new Rect(i.Key.Fit!.X + 10, i.Key.Fit.Y + 10, overlayImage.PixelWidth, overlayImage.PixelHeight));
+                    drawingContext.DrawImage(overlayImage, new Rect(i.Key.Fit!.X + geometry, i.Key.Fit.Y + geometry, overlayImage.PixelWidth, overlayImage.PixelHeight));
                 }
             }
 
